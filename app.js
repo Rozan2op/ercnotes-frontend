@@ -1,5 +1,4 @@
-// --- 1. DATA & CONFIGURATION ---
-
+// --- 1. CONFIGURATION ---
 const API_URL = "https://benotes-backend.onrender.com";
 
 // --- 2. DOM ELEMENTS ---
@@ -12,11 +11,10 @@ const modal = document.getElementById('uploadModal');
 const successModal = document.getElementById('successModal');
 const selectedFacultyTitle = document.getElementById('selected-faculty-title');
 
-// State
 let currentFaculty = '';
 let currentSemester = '';
 
-// --- 3. INITIAL RENDER & NAVIGATION ---
+// --- 3. NAVIGATION ---
 function renderFaculties() {
     facultyGrid.innerHTML = '';
     for (const [key, data] of Object.entries(engineeringData)) {
@@ -52,7 +50,7 @@ function resetView() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// --- 4. SUBJECT LOADING ---
+// --- 4. SUBJECT RENDERING ---
 function loadSubjects(sem, btnElement) {
     currentSemester = sem;
     document.querySelectorAll('.sem-btn').forEach(b => b.classList.remove('active'));
@@ -104,11 +102,9 @@ function createSubjectRow(name) {
 function createElectiveDropdown(electiveObj) {
     const container = document.createElement('div');
     container.className = 'elective-container';
-    
     const header = document.createElement('div');
     header.className = 'elective-header';
     header.innerHTML = `<span><i class="fas fa-layer-group"></i> ${electiveObj.name}</span> <i class="fas fa-chevron-down"></i>`;
-    
     const list = document.createElement('div');
     list.className = 'elective-list';
 
@@ -121,11 +117,9 @@ function createElectiveDropdown(electiveObj) {
         const subDiv = document.createElement('div');
         subDiv.className = 'subject-item';
         const containerId = `res-${subName.replace(/[^a-zA-Z0-9]/g, '')}`;
-        
         const subHeader = document.createElement('div');
         subHeader.className = 'subject-header';
         subHeader.innerHTML = `<span>${subName}</span> <i class="fas fa-chevron-down"></i>`;
-
         const subContent = document.createElement('div');
         subContent.className = 'subject-content';
         subContent.id = containerId;
@@ -140,7 +134,6 @@ function createElectiveDropdown(electiveObj) {
         subDiv.appendChild(subContent);
         list.appendChild(subDiv);
     });
-
     container.appendChild(header);
     container.appendChild(list);
     subjectList.appendChild(container);
@@ -154,20 +147,20 @@ async function fetchNotes(subjectName, containerId) {
     container.innerHTML = '<div style="padding:20px; color:#94a3b8; text-align:center;"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
     
     try {
-        const url = `${API_URL}/notes?faculty=${currentFaculty}&semester=${currentSemester}&subject=${encodeURIComponent(subjectName)}`;
+        // FIXED URL PATH (/api/notes)
+        const url = `${API_URL}/api/notes?faculty=${currentFaculty}&semester=${currentSemester}&subject=${encodeURIComponent(subjectName)}`;
         const response = await fetch(url);
         const notes = await response.json();
         
         container.innerHTML = ''; 
         container.setAttribute('data-loaded', 'true');
 
-        if(notes.length === 0) {
+        if(!notes || notes.length === 0) {
             container.innerHTML = '<div style="padding:20px; color:#94a3b8; text-align:center;">No resources uploaded yet.</div>';
             return;
         }
 
         const groups = { 'Syllabus': [], 'Text Book': [], 'Notes': [], 'Manual': [], 'Lab Report': [], 'Assignment': [], 'Question': [] };
-
         notes.forEach(note => {
             if(groups[note.type]) groups[note.type].push(note);
             else groups['Notes'].push(note);
@@ -186,25 +179,21 @@ async function fetchNotes(subjectName, containerId) {
                     link.href = note.link;
                     link.target = "_blank";
                     link.className = "resource-link";
-                    const displayName = note.originalName || "View PDF";
-                    link.innerHTML = `${getIcon(note.type)} ${displayName}`;
+                    link.innerHTML = `${getIcon(note.type)} ${note.originalName || "View PDF"}`;
                     listDiv.appendChild(link);
                 });
-
                 groupDiv.appendChild(listDiv);
                 container.appendChild(groupDiv);
             }
         }
     } catch (error) {
+        console.error(error);
         container.innerHTML = '<div style="padding:20px; color:#ef4444; text-align:center;">Failed to load resources.</div>'; 
     }
 }
 
 function getIcon(type) {
-    const icons = {
-        'Notes': 'fa-file-pdf', 'Syllabus': 'fa-list-alt', 'Question': 'fa-question-circle',
-        'Manual': 'fa-cogs', 'Lab Report': 'fa-flask', 'Assignment': 'fa-pen-fancy', 'Text Book': 'fa-book'
-    };
+    const icons = { 'Notes': 'fa-file-pdf', 'Syllabus': 'fa-list-alt', 'Question': 'fa-question-circle', 'Manual': 'fa-cogs', 'Lab Report': 'fa-flask', 'Assignment': 'fa-pen-fancy', 'Text Book': 'fa-book' };
     return `<i class="fas ${icons[type] || 'fa-link'}"></i>`;
 }
 
@@ -273,10 +262,10 @@ function updateFileName() {
 function closeModal() { modal.style.display = 'none'; }
 function closeSuccessModal() { successModal.style.display = 'none'; }
 
-window.onclick = function(event) {
+window.onclick = (event) => {
     if (event.target == modal) closeModal();
     if (event.target == successModal) closeSuccessModal();
-}
+};
 
 // --- 7. FORM SUBMIT ---
 document.getElementById('uploadForm').onsubmit = async function(e) {
@@ -307,47 +296,11 @@ document.getElementById('uploadForm').onsubmit = async function(e) {
             alert("❌ Server Error. Please try again.");
         }
     } catch (error) {
-        alert("❌ Could not connect to the server.");
+        alert("❌ Could not connect to server.");
     } finally {
         submitBtn.innerHTML = originalText;
         submitBtn.disabled = false;
     }
 };
 
-// Init
 renderFaculties();
-
-async function loadNotes() {
-    console.log("📡 Attempting to fetch notes from:", `${API_URL}/api/notes`);
-    const container = document.getElementById('notes-container');
-
-    try {
-        const res = await fetch(`${API_URL}/api/notes`);
-        
-        // Log the raw response status
-        console.log("Status Code:", res.status);
-
-        if (!res.ok) {
-            throw new Error(`Server responded with ${res.status}`);
-        }
-
-        const notes = await res.json();
-        
-        // This is the most important log!
-        console.log("📦 Data received from server:", notes);
-
-        if (notes.length === 0) {
-            console.warn("⚠️ No approved notes found in database.");
-            container.innerHTML = `<div class="no-data">No approved notes yet. Be the first to contribute!</div>`;
-            return;
-        }
-
-        // Call your function to draw the notes
-        renderNotes(notes); 
-        console.log("✅ Notes rendered successfully.");
-
-    } catch (err) {
-        console.error("❌ Fetch Error:", err);
-        container.innerHTML = `<div class="error-msg">Everything is quiet here. Try refreshing!</div>`;
-    }
-}
