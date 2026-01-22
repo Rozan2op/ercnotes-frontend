@@ -316,3 +316,38 @@ document.getElementById('uploadForm').onsubmit = async function(e) {
 
 // Init
 renderFaculties();
+
+async function loadNotes() {
+    console.log("📡 Attempting to fetch notes from:", `${API_URL}/api/notes`);
+    const container = document.getElementById('notes-container');
+
+    try {
+        const res = await fetch(`${API_URL}/api/notes`);
+        
+        // Log the raw response status
+        console.log("Status Code:", res.status);
+
+        if (!res.ok) {
+            throw new Error(`Server responded with ${res.status}`);
+        }
+
+        const notes = await res.json();
+        
+        // This is the most important log!
+        console.log("📦 Data received from server:", notes);
+
+        if (notes.length === 0) {
+            console.warn("⚠️ No approved notes found in database.");
+            container.innerHTML = `<div class="no-data">No approved notes yet. Be the first to contribute!</div>`;
+            return;
+        }
+
+        // Call your function to draw the notes
+        renderNotes(notes); 
+        console.log("✅ Notes rendered successfully.");
+
+    } catch (err) {
+        console.error("❌ Fetch Error:", err);
+        container.innerHTML = `<div class="error-msg">Everything is quiet here. Try refreshing!</div>`;
+    }
+}
