@@ -12,7 +12,7 @@ const selectedFacultyTitle = document.getElementById('selected-faculty-title');
 // Modals
 const modal = document.getElementById('uploadModal');
 const successModal = document.getElementById('successModal');
-const contributorsModal = document.getElementById('contributorsModal'); // New
+const contributorsModal = document.getElementById('contributorsModal'); 
 
 let currentFaculty = '';
 let currentSemester = '';
@@ -351,46 +351,53 @@ document.getElementById('uploadForm').onsubmit = async function(e) {
     }
 };
 
-// --- 7. NEW: CONTRIBUTORS FEATURE ---
+// --- 7. NEW: CONTRIBUTORS FEATURE (CONNECTED TO BACKEND) ---
 function openContributorsModal() {
     contributorsModal.style.display = 'block';
     renderContributors();
 }
 
-function renderContributors() {
+async function renderContributors() {
     const list = document.getElementById('contributorsList');
-    list.innerHTML = '';
+    list.innerHTML = '<div style="text-align:center; padding:20px; color:#64748b;"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
 
-    // NOTE: This is a placeholder list until backend supports user counting.
-    // I've put you as the top contributor!
-    const contributors = [
-        { name: "Rozan Shah", count: 18 },
-        { name: "Engineering Dept", count: 12 },
-        { name: "Anonymous Student", count: 7 },
-        { name: "IOE Notes Team", count: 5 }
-    ];
+    try {
+        // Fetch real data from backend
+        const response = await fetch(`${API_URL}/api/contributors`);
+        const contributors = await response.json();
 
-    contributors.forEach((c, index) => {
-        const div = document.createElement('div');
-        div.className = 'contributor-item';
-        
-        // Medals logic
-        let icon = 'fa-user';
-        let color = '#cbd5e1'; // Default gray
-        
-        if (index === 0) { icon = 'fa-crown'; color = '#fbbf24'; } // Gold
-        if (index === 1) { icon = 'fa-medal'; color = '#94a3b8'; } // Silver
-        if (index === 2) { icon = 'fa-medal'; color = '#b45309'; } // Bronze
+        list.innerHTML = '';
 
-        div.innerHTML = `
-            <span class="contributor-name">
-                <i class="fas ${icon}" style="color: ${color}; width: 25px;"></i> 
-                ${c.name}
-            </span>
-            <span class="contributor-count">${c.count} uploads</span>
-        `;
-        list.appendChild(div);
-    });
+        if(contributors.length === 0) {
+            list.innerHTML = '<p style="text-align:center; color:#94a3b8; margin-top: 15px;">No contributions yet.</p>';
+            return;
+        }
+
+        contributors.forEach((c, index) => {
+            const div = document.createElement('div');
+            div.className = 'contributor-item';
+            
+            // Medals logic
+            let icon = 'fa-user';
+            let color = '#cbd5e1'; // Default gray
+            
+            if (index === 0) { icon = 'fa-crown'; color = '#fbbf24'; } // Gold
+            if (index === 1) { icon = 'fa-medal'; color = '#94a3b8'; } // Silver
+            if (index === 2) { icon = 'fa-medal'; color = '#b45309'; } // Bronze
+
+            div.innerHTML = `
+                <span class="contributor-name">
+                    <i class="fas ${icon}" style="color: ${color}; width: 25px;"></i> 
+                    ${c._id || "Anonymous"} 
+                </span>
+                <span class="contributor-count">${c.count} uploads</span>
+            `;
+            list.appendChild(div);
+        });
+    } catch (error) {
+        console.error("Error loading contributors:", error);
+        list.innerHTML = '<p style="text-align:center; color:#ef4444;">Failed to load list.</p>';
+    }
 }
 
 // Start App
