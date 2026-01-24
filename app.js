@@ -152,25 +152,16 @@ async function fetchNotes(subjectName, containerId) {
         const response = await fetch(url);
         const dbNotes = await response.json();
         
-    
-
-// REPLACE the "Fetch from Manual List" section with this:
-
-    // 2. Fetch from Manual List (SHARED MODE)
-    let manualNotes = [];
-    
-    // We simply look for the Subject Name in our generated list
-    // It doesn't matter if the user is in Civil or Computer -> If the subject name matches, we show the files.
-    if (window.manualResources && window.manualResources[subjectName]) {
-        manualNotes = window.manualResources[subjectName].map(item => ({
-            type: item.type,
-            originalName: item.name,
-            link: item.link,
-            isManual: true
-        }));
-    }
-
-
+        // 2. Fetch from Manual List (SHARED SUBJECT LOGIC)
+        let manualNotes = [];
+        if (window.manualResources && window.manualResources[subjectName]) {
+            manualNotes = window.manualResources[subjectName].map(item => ({
+                type: item.type,
+                originalName: item.name,
+                link: item.link,
+                isManual: true
+            }));
+        }
 
         // 3. Merge Results
         const allNotes = [...manualNotes, ...dbNotes];
@@ -183,18 +174,44 @@ async function fetchNotes(subjectName, containerId) {
             return;
         }
 
-        const groups = { 'Syllabus': [], 'Text Book': [], 'Notes': [], 'Manual': [], 'Lab Report': [], 'Assignment': [], 'Question': [] };
+        // --- UPDATED GROUPING LOGIC ---
+        // These are the categories allowed to appear on your website.
+        // I have explicitly added 'Past Question' here.
+        const groups = { 
+            'Syllabus': [], 
+            'Text Book': [], 
+            'Notes': [], 
+            'Manual': [], 
+            'Lab Report': [], 
+            'Assignment': [], 
+            'Past Question': [] // ✅ Now recognized as a main category
+        };
         
         allNotes.forEach(note => {
-            if(groups[note.type]) groups[note.type].push(note);
-            else groups['Notes'].push(note);
+            // Normalize: If it's "Question" or "Old Questions", treat it as "Past Question"
+            let noteType = note.type;
+            if (noteType === 'Question' || noteType === 'Old Questions') {
+                noteType = 'Past Question';
+            }
+
+            // If the type matches one of our known groups, add it there.
+            if(groups[noteType]) {
+                groups[noteType].push(note);
+            } 
+            // If it's something totally unknown, dump it into 'Notes' default
+            else {
+                groups['Notes'].push(note);
+            }
         });
 
         for (const [type, typeNotes] of Object.entries(groups)) {
             if (typeNotes.length > 0) {
                 const groupDiv = document.createElement('div');
                 groupDiv.className = 'resource-category';
+                
+                // This 'type' variable (e.g., "Past Question") will be the title on the website
                 groupDiv.innerHTML = `<span class="category-label">${type}</span>`;
+                
                 const listDiv = document.createElement('div');
                 listDiv.className = 'resource-list';
 
@@ -202,7 +219,6 @@ async function fetchNotes(subjectName, containerId) {
                     const link = document.createElement('a');
                     link.href = note.link;
                     link.target = "_blank";
-                    // Add a special class if it's a manual file (optional styling)
                     link.className = note.isManual ? "resource-link manual-link" : "resource-link";
                     link.innerHTML = `${getIcon(note.type)} ${note.originalName || "View PDF"}`;
                     listDiv.appendChild(link);
@@ -218,12 +234,23 @@ async function fetchNotes(subjectName, containerId) {
 }
 
 function getIcon(type) {
-    const icons = { 'Notes': 'fa-file-pdf', 'Syllabus': 'fa-list-alt', 'Question': 'fa-question-circle', 'Manual': 'fa-cogs', 'Lab Report': 'fa-flask', 'Assignment': 'fa-pen-fancy', 'Text Book': 'fa-book' };
+    // Map icons to categories.
+    // Ensure 'Past Question' gets the question-circle icon.
+    const icons = { 
+        'Notes': 'fa-file-pdf', 
+        'Syllabus': 'fa-list-alt', 
+        'Manual': 'fa-cogs', 
+        'Lab Report': 'fa-flask', 
+        'Assignment': 'fa-pen-fancy', 
+        'Text Book': 'fa-book',
+        'Past Question': 'fa-question-circle', // ✅ Maps to question icon
+        'Question': 'fa-question-circle',      // Fallback
+        'Old Questions': 'fa-question-circle'  // Fallback
+    };
     return `<i class="fas ${icons[type] || 'fa-link'}"></i>`;
 }
 
 // --- 6. MODAL & FORM LOGIC ---
-// ... (Keep your existing Modal functions openGlobalModal, modalFacultyChanged etc.) ...
 function openGlobalModal() {
     modal.style.display = 'block';
     const facultySelect = document.getElementById('modalFaculty');
@@ -319,7 +346,6 @@ document.getElementById('uploadForm').onsubmit = async function(e) {
             successModal.style.display = 'block';
             e.target.reset();
             document.getElementById('fileNameDisplay').innerText = "";
-            // NOTE: We don't wait for drive upload. Server says OK immediately.
         } else {
             alert("❌ Server Error. Please try again.");
         }
