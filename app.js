@@ -7,9 +7,12 @@ const semesterSection = document.getElementById('semester-section');
 const facultySection = document.getElementById('faculty-section');
 const subjectList = document.getElementById('subject-list');
 const semesterList = document.getElementById('semester-list');
+const selectedFacultyTitle = document.getElementById('selected-faculty-title');
+
+// Modals
 const modal = document.getElementById('uploadModal');
 const successModal = document.getElementById('successModal');
-const selectedFacultyTitle = document.getElementById('selected-faculty-title');
+const contributorsModal = document.getElementById('contributorsModal'); // New
 
 let currentFaculty = '';
 let currentSemester = '';
@@ -147,12 +150,12 @@ async function fetchNotes(subjectName, containerId) {
     container.innerHTML = '<div style="padding:20px; color:#94a3b8; text-align:center;"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
     
     try {
-        // 1. Fetch from Database (Drive files)
+        // 1. Fetch from Database
         const url = `${API_URL}/api/notes?faculty=${currentFaculty}&semester=${currentSemester}&subject=${encodeURIComponent(subjectName)}`;
         const response = await fetch(url);
         const dbNotes = await response.json();
         
-        // 2. Fetch from Manual List (SHARED SUBJECT LOGIC)
+        // 2. Fetch from Manual List
         let manualNotes = [];
         if (window.manualResources && window.manualResources[subjectName]) {
             manualNotes = window.manualResources[subjectName].map(item => ({
@@ -174,9 +177,6 @@ async function fetchNotes(subjectName, containerId) {
             return;
         }
 
-        // --- UPDATED GROUPING LOGIC ---
-        // These are the categories allowed to appear on your website.
-        // I have explicitly added 'Past Question' here.
         const groups = { 
             'Syllabus': [], 
             'Text Book': [], 
@@ -184,22 +184,17 @@ async function fetchNotes(subjectName, containerId) {
             'Manual': [], 
             'Lab Report': [], 
             'Assignment': [], 
-            'Past Question': [] // ✅ Now recognized as a main category
+            'Past Question': []
         };
         
         allNotes.forEach(note => {
-            // Normalize: If it's "Question" or "Old Questions", treat it as "Past Question"
             let noteType = note.type;
             if (noteType === 'Question' || noteType === 'Old Questions') {
                 noteType = 'Past Question';
             }
-
-            // If the type matches one of our known groups, add it there.
             if(groups[noteType]) {
                 groups[noteType].push(note);
-            } 
-            // If it's something totally unknown, dump it into 'Notes' default
-            else {
+            } else {
                 groups['Notes'].push(note);
             }
         });
@@ -208,8 +203,6 @@ async function fetchNotes(subjectName, containerId) {
             if (typeNotes.length > 0) {
                 const groupDiv = document.createElement('div');
                 groupDiv.className = 'resource-category';
-                
-                // This 'type' variable (e.g., "Past Question") will be the title on the website
                 groupDiv.innerHTML = `<span class="category-label">${type}</span>`;
                 
                 const listDiv = document.createElement('div');
@@ -234,8 +227,6 @@ async function fetchNotes(subjectName, containerId) {
 }
 
 function getIcon(type) {
-    // Map icons to categories.
-    // Ensure 'Past Question' gets the question-circle icon.
     const icons = { 
         'Notes': 'fa-file-pdf', 
         'Syllabus': 'fa-list-alt', 
@@ -243,9 +234,9 @@ function getIcon(type) {
         'Lab Report': 'fa-flask', 
         'Assignment': 'fa-pen-fancy', 
         'Text Book': 'fa-book',
-        'Past Question': 'fa-question-circle', // ✅ Maps to question icon
-        'Question': 'fa-question-circle',      // Fallback
-        'Old Questions': 'fa-question-circle'  // Fallback
+        'Past Question': 'fa-question-circle',
+        'Question': 'fa-question-circle',
+        'Old Questions': 'fa-question-circle'
     };
     return `<i class="fas ${icons[type] || 'fa-link'}"></i>`;
 }
@@ -314,10 +305,13 @@ function updateFileName() {
 
 function closeModal() { modal.style.display = 'none'; }
 function closeSuccessModal() { successModal.style.display = 'none'; }
+function closeContributorsModal() { contributorsModal.style.display = 'none'; }
 
+// Close modals when clicking outside
 window.onclick = (event) => {
     if (event.target == modal) closeModal();
     if (event.target == successModal) closeSuccessModal();
+    if (event.target == contributorsModal) closeContributorsModal();
 };
 
 document.getElementById('uploadForm').onsubmit = async function(e) {
@@ -352,9 +346,52 @@ document.getElementById('uploadForm').onsubmit = async function(e) {
     } catch (error) {
         alert("❌ Could not connect to server.");
     } finally {
-        submitBtn.innerHTML = 'Submit';
+        submitBtn.innerHTML = '<span>Upload Resource</span> <i class="fas fa-arrow-right"></i>';
         submitBtn.disabled = false;
     }
 };
 
+// --- 7. NEW: CONTRIBUTORS FEATURE ---
+function openContributorsModal() {
+    contributorsModal.style.display = 'block';
+    renderContributors();
+}
+
+function renderContributors() {
+    const list = document.getElementById('contributorsList');
+    list.innerHTML = '';
+
+    // NOTE: This is a placeholder list until backend supports user counting.
+    // I've put you as the top contributor!
+    const contributors = [
+        { name: "Rozan Shah", count: 18 },
+        { name: "Engineering Dept", count: 12 },
+        { name: "Anonymous Student", count: 7 },
+        { name: "IOE Notes Team", count: 5 }
+    ];
+
+    contributors.forEach((c, index) => {
+        const div = document.createElement('div');
+        div.className = 'contributor-item';
+        
+        // Medals logic
+        let icon = 'fa-user';
+        let color = '#cbd5e1'; // Default gray
+        
+        if (index === 0) { icon = 'fa-crown'; color = '#fbbf24'; } // Gold
+        if (index === 1) { icon = 'fa-medal'; color = '#94a3b8'; } // Silver
+        if (index === 2) { icon = 'fa-medal'; color = '#b45309'; } // Bronze
+
+        div.innerHTML = `
+            <span class="contributor-name">
+                <i class="fas ${icon}" style="color: ${color}; width: 25px;"></i> 
+                ${c.name}
+            </span>
+            <span class="contributor-count">${c.count} uploads</span>
+        `;
+        list.appendChild(div);
+    });
+}
+
+// Start App
 renderFaculties();
