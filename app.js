@@ -1,5 +1,5 @@
 // --- 1. CONFIGURATION ---
-const API_URL = "https://benotes-backend.onrender.com";
+const API_URL = "https://ercnotes-backend.onrender.com";
 
 // --- 2. DOM ELEMENTS ---
 const facultyGrid = document.getElementById('faculty-grid');
