@@ -92,7 +92,7 @@ header {
 }
 
 .logo:hover { transform: scale(1.05); }
-.logo i { background: var(--gradient-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: float 3s ease-in-out infinite; }
+.logo i { background: var(--gradient-primary);background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: float 3s ease-in-out infinite; }
 
 .badge {
     padding: 0.25rem 0.75rem;
@@ -221,6 +221,7 @@ header {
     border-radius: 24px;
     padding: 2px;
     background: var(--gradient-primary);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     mask-composite: exclude;
     opacity: 0;
